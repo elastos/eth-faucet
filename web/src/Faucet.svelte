@@ -15,6 +15,7 @@
 
   let mounted = false;
   let hcaptchaLoaded = false;
+  let submitting = false;
 
   onMount(async () => {
     const res = await fetch('/api/info');
@@ -46,8 +47,10 @@
   });
 
   async function handleRequest() {
+    submitting = true;
     let address = input;
     if (address === null) {
+      submitting = false;
       toast({ message: 'input required', type: 'is-warning' });
       return;
     }
@@ -61,6 +64,7 @@
           return;
         }
       } catch (error) {
+        submitting = false;
         toast({ message: error.reason, type: 'is-warning' });
         return;
       }
@@ -69,6 +73,7 @@
     try {
       address = getAddress(address);
     } catch (error) {
+      submitting = false;
       toast({ message: error.reason, type: 'is-warning' });
       return;
     }
@@ -99,6 +104,7 @@
     } catch (err) {
       console.error(err);
     }
+    submitting = false;
   }
 
   function capitalize(str) {
@@ -121,65 +127,45 @@
   <section class="hero is-info is-fullheight">
     <div class="hero-head">
       <nav class="navbar">
-        <div class="container">
-          <div class="navbar-brand">
-            <a class="navbar-item" href="../..">
-              <span class="icon">
-                <i class="fa fa-bath" />
-              </span>
-              <span><b>{faucetInfo.symbol} Faucet</b></span>
-            </a>
-          </div>
-          <div id="navbarMenu" class="navbar-menu">
-            <div class="navbar-end">
-              <span class="navbar-item">
-                <a
-                  class="button is-white is-outlined"
-                  href="https://github.com/chainflag/eth-faucet"
-                >
-                  <span class="icon">
-                    <i class="fa fa-github" />
-                  </span>
-                  <span>View Source</span>
-                </a>
-              </span>
-            </div>
-          </div>
-        </div>
       </nav>
     </div>
 
     <div class="hero-body">
       <div class="container has-text-centered">
-        <div class="column is-6 is-offset-3">
-          <h1 class="title">
-            Receive {faucetInfo.payout}
-            {faucetInfo.symbol} per request
-          </h1>
-          <h2 class="subtitle">
-            Serving from {faucetInfo.account}
-          </h2>
-          <div id="hcaptcha" data-size="invisible"></div>
-          <div class="box">
-            <div class="field is-grouped">
-              <p class="control is-expanded">
-                <input
-                  bind:value={input}
-                  class="input is-rounded"
-                  type="text"
-                  placeholder="Enter your address or ENS name"
-                />
-              </p>
-              <p class="control">
-                <button
-                  on:click={handleRequest}
-                  class="button is-primary is-rounded"
-                >
-                  Request
-                </button>
-              </p>
+        <div class="columns">
+            <div class="column is-4">
+                <img src="/home_hero2.png" alt="ela_logo" width="600" height="600" />
             </div>
-          </div>
+            <div class="column is-7" style="padding-top: 90px">
+              <h1 class="title">
+                Receive {faucetInfo.payout}
+                {faucetInfo.symbol} per request
+              </h1>
+              <h2 class="subtitle">
+                Serving from {faucetInfo.account}
+              </h2>
+              <div id="hcaptcha" data-size="invisible"></div>
+              <div class="box">
+                <div class="field is-grouped">
+                  <p class="control is-expanded">
+                    <input
+                      bind:value={input}
+                      class="input is-rounded"
+                      type="text"
+                      placeholder="Enter your address"
+                    />
+                  </p>
+                  <p class="control">
+                    <button
+                      on:click={handleRequest}
+                      class="button {submitting ? 'is-loading': ''} is-primary is-rounded"
+                    >
+                      Request
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
         </div>
       </div>
     </div>
@@ -188,9 +174,7 @@
 
 <style>
   .hero.is-info {
-    background:
-      linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
-      url('/background.jpg') no-repeat center center fixed;
+    background-color: #1b1b1d;
     -webkit-background-size: cover;
     -moz-background-size: cover;
     -o-background-size: cover;
