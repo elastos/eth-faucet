@@ -123,17 +123,18 @@ func (b *TxBuild) buildEIP1559Tx(ctx context.Context, to *common.Address, value 
 }
 
 func (b *TxBuild) buildLegacyTx(ctx context.Context, to *common.Address, value *big.Int, gasLimit uint64, nonce uint64) (*types.Transaction, error) {
-	gasPrice, err := b.client.SuggestGasPrice(ctx)
-	if err != nil {
-		return nil, err
-	}
+	//gasPrice, err := b.client.SuggestGasPrice(ctx)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	return types.NewTx(&types.LegacyTx{
 		Nonce:    nonce,
-		GasPrice: gasPrice,
-		Gas:      gasLimit,
-		To:       to,
-		Value:    value,
+		GasPrice: big.NewInt(1000000000),
+		//GasPrice: gasPrice,
+		Gas:   gasLimit,
+		To:    to,
+		Value: value,
 	}), nil
 }
 
