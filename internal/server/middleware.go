@@ -1,8 +1,11 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"net"
 	"net/http"
 	"strings"
@@ -20,15 +23,17 @@ type Limiter struct {
 	cache      *ttlcache.Cache
 	proxyCount int
 	ttl        time.Duration
+	provider   string
 }
 
-func NewLimiter(proxyCount int, ttl time.Duration) *Limiter {
+func NewLimiter(proxyCount int, ttl time.Duration, provider string) *Limiter {
 	cache := ttlcache.NewCache()
 	cache.SkipTTLExtensionOnHit(true)
 	return &Limiter{
 		cache:      cache,
 		proxyCount: proxyCount,
 		ttl:        ttl,
+		provider:   provider,
 	}
 }
 
@@ -59,11 +64,36 @@ func (l *Limiter) ServeHTTP(w http.ResponseWriter, r *http.Request, next http.Ha
 	l.cache.SetWithTTL(clientIP, true, l.ttl)
 	l.mutex.Unlock()
 
+	client, err := ethclient.Dial(l.provider)
+	if err != nil {
+		return
+	}
+	toNonce, err := client.PendingNonceAt(context.Background(), common.HexToAddress(address))
+	if err != nil {
+		return
+	}
+
+	if cacheNonce, err := l.cache.Get("nonce-" + address); err == nil {
+		if cacheNonce == toNonce {
+			log.WithFields(log.Fields{
+				"address":     address,
+				"nonce":       toNonce,
+				"cachedNonce": cacheNonce,
+			}).Info("Address nonce same as cached nonce")
+			l.cache.Remove(address)
+			l.cache.Remove(clientIP)
+			renderJSON(w, claimResponse{Message: "Please do not make repeated requests."}, http.StatusTooManyRequests)
+			return
+		}
+	}
+
 	next.ServeHTTP(w, r)
 	if w.(negroni.ResponseWriter).Status() != http.StatusOK {
 		l.cache.Remove(address)
 		l.cache.Remove(clientIP)
 		return
+	} else {
+		l.cache.Set("nonce-"+address, toNonce)
 	}
 	log.WithFields(log.Fields{
 		"address":  address,
